@@ -261,19 +261,16 @@ class AdminController:
 
         category = clean_updates.get("course_category", "")
         program_type = clean_updates.get("program_type", "N/A")
-        specialization = clean_updates.get("specialization", "N/A")
 
         if category == "Regular Program":
             clean_updates["course"] = "REGULAR"
             clean_updates["program_type"] = "N/A"
-            clean_updates["specialization"] = "N/A"
         elif program_type == "STE":
             clean_updates["course"] = "STE"
         elif program_type == "SPJ":
             clean_updates["course"] = "SPJ"
         elif program_type == "SPA":
             clean_updates["course"] = "SPA"
-            clean_updates["specialization"] = specialization
         else:
             clean_updates["course"] = "UNKNOWN"
 

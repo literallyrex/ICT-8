@@ -845,8 +845,7 @@ class AdminDashboardView(BaseView):
                 self.category.set(current_category)
                 self.category.pack(pady=(0, 6), padx=30)
 
-                self.program = ctk.CTkOptionMenu(master, values=["STE", "SPJ", "SPA"], width=360, height=36, corner_radius=8, command=self.update_spa)
-                self.spec = ctk.CTkOptionMenu(master, values=["Dancing", "Theatre", "Arts", "Music"], width=360, height=36, corner_radius=8)
+                self.program = ctk.CTkOptionMenu(master, values=["STE", "SPJ", "SPA"], width=360, height=36, corner_radius=8)
                 self.grade_option = ctk.CTkOptionMenu(master, values=["Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"], width=360, height=36, corner_radius=8)
 
                 current_grade = current_data.get("grade", "") or "Select Grade Level"
@@ -854,24 +853,13 @@ class AdminDashboardView(BaseView):
                 self.grade_option.pack(pady=(0, 10), padx=30)
 
                 self.update_options(self.category.get(), initial=True)
-                if current_data.get("program_type") == "SPA":
-                    self.update_spa("SPA", initial=True)
 
             def update_options(self, choice, initial=False):
                 self.program.pack_forget()
-                self.spec.pack_forget()
                 self.grade_option.pack_forget()
                 if choice == "Special Programs":
                     self.program.pack(pady=(0, 6), padx=30)
                     self.program.set(user_data.get("program_type", "STE") if initial else "Select Special Program")
-                self.grade_option.pack(pady=(0, 10), padx=30)
-
-            def update_spa(self, choice, initial=False):
-                self.spec.pack_forget()
-                self.grade_option.pack_forget()
-                if choice == "SPA":
-                    self.spec.pack(pady=(0, 6), padx=30)
-                    self.spec.set(user_data.get("specialization", "Music") if initial else "Select SPA Specialization")
                 self.grade_option.pack(pady=(0, 10), padx=30)
 
         course_manager = CourseManager(scroll, user_data)
@@ -893,7 +881,6 @@ class AdminDashboardView(BaseView):
             updates["section"] = "" if updates["section"] == "(No sections created)" else updates["section"]
             updates["course_category"] = course_manager.category.get()
             updates["program_type"] = course_manager.program.get() if updates["course_category"] == "Special Programs" else "N/A"
-            updates["specialization"] = course_manager.spec.get() if updates["program_type"] == "SPA" else "N/A"
             updates["grade"] = course_manager.grade_option.get()
 
             if "Select" in [updates["gender"], updates["course_category"], updates["grade"]]:
@@ -901,9 +888,6 @@ class AdminDashboardView(BaseView):
                 return
             if updates["course_category"] == "Special Programs" and updates["program_type"].startswith("Select"):
                 messagebox.showerror("Error", "Please select a special program.", parent=edit_window)
-                return
-            if updates["program_type"] == "SPA" and updates["specialization"].startswith("Select"):
-                messagebox.showerror("Error", "Please select an SPA specialization.", parent=edit_window)
                 return
 
             result = self.admin_controller.update_user(user_data["id"], updates)

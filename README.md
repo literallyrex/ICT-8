@@ -143,6 +143,7 @@ Examples:
 ```powershell
 python -m migrations.migrate_program_schedules
 python -m migrations.migrate_v8
+python -m migrations.migrate_v9
 python -m migrations.migrate_sections
 ```
 

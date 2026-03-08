@@ -14,7 +14,6 @@ class RegisterView(BaseView):
         self.reg_gender = None
         self.reg_category = None
         self.reg_program_type = None
-        self.reg_specialization = None
         self.reg_address = None
         self.row_marker = 0
 
@@ -89,14 +88,6 @@ class RegisterView(BaseView):
             width=300,
             height=36,
             corner_radius=10,
-            command=self.update_spa_options,
-        )
-        self.reg_specialization = ctk.CTkOptionMenu(
-            frame,
-            values=["Dancing", "Theatre", "Arts", "Music"],
-            width=300,
-            height=36,
-            corner_radius=10,
         )
 
         self.row_marker = row_index
@@ -151,17 +142,10 @@ class RegisterView(BaseView):
 
     def update_course_options(self, choice):
         self.reg_program_type.grid_forget()
-        self.reg_specialization.grid_forget()
 
         if choice == "Special Programs":
             self.reg_program_type.grid(row=self.row_marker, column=0, pady=(0, 6))
             self.reg_program_type.set("Select Special Program")
-
-    def update_spa_options(self, choice):
-        self.reg_specialization.grid_forget()
-        if choice == "SPA":
-            self.reg_specialization.grid(row=self.row_marker + 1, column=0, pady=(0, 6))
-            self.reg_specialization.set("Select SPA Specialization")
 
     def handle_register(self):
         payload = {
@@ -176,7 +160,6 @@ class RegisterView(BaseView):
             "gender": self.reg_gender.get(),
             "course_category": self.reg_category.get(),
             "program_type": self.reg_program_type.get() if self.reg_category.get() == "Special Programs" else "N/A",
-            "specialization": self.reg_specialization.get() if self.reg_program_type.get() == "SPA" else "N/A",
         }
 
         result = self.auth_controller.register_student(payload)

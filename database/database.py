@@ -42,7 +42,6 @@ def initialize_db():
                 gender VARCHAR(20),
                 course_category VARCHAR(50),
                 program_type VARCHAR(50),
-                specialization VARCHAR(100),
                 section VARCHAR(20) DEFAULT NULL
             )
         """)
@@ -176,19 +175,17 @@ def add_user(username, password_hash, full_name, email, phone, role, **kwargs):
         gender = kwargs.get('gender')
         course_category = kwargs.get('course_category')
         program_type = kwargs.get('program_type')
-        specialization = kwargs.get('specialization')
         section = kwargs.get('section')
 
         query = """INSERT INTO users 
                    (username, password_hash, full_name, email, phone, user_role, 
                     address, student_id, course, status, grade, age, gender, 
-                    course_category, program_type, specialization, section) 
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+                    course_category, program_type, section) 
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
         
         cursor.execute(query, (username, password_hash, full_name, email, phone, role,
                                address, student_id, course, status, grade,
-                               age, gender, course_category, program_type, 
-                               specialization, section))
+                               age, gender, course_category, program_type, section))
         conn.commit()
         return True
     except mysql.connector.Error as err:
@@ -250,7 +247,7 @@ def search_users(search_query="", status_filter="All", program_filter="All", gra
         if search_query:
             search_cols = ["username", "full_name", "email", "phone", "address",
                            "student_id", "course", "grade", "course_category", 
-                           "program_type", "specialization", "gender", "section"]
+                           "program_type", "gender", "section"]
             like_clause = " OR ".join([f"{col} LIKE %s" for col in search_cols])
             conditions.append(f"({like_clause})")
             like_q = f"%{search_query}%"
@@ -316,7 +313,7 @@ def update_user_status(user_id, status, section=None, grade=None):
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT status, section, grade, course_category, program_type, specialization FROM users WHERE id = %s", (user_id,))
+        cursor.execute("SELECT status, section, grade, course_category, program_type FROM users WHERE id = %s", (user_id,))
         existing = cursor.fetchone()
         if not existing:
             return False
@@ -324,14 +321,10 @@ def update_user_status(user_id, status, section=None, grade=None):
         if grade and section:
             cat = existing['course_category'] or ""
             prog = existing['program_type'] or "N/A"
-            spec = existing['specialization'] or "N/A"
             
             course_part = cat
             if prog != "N/A":
-                course_part += f" ({prog}"
-                if spec != "N/A":
-                    course_part += f" - {spec}"
-                course_part += ")"
+                course_part += f" ({prog})"
             
             new_course = f"{course_part} - {grade}"
             
@@ -568,10 +561,27 @@ def update_user_details(user_id, **kwargs):
         conn = get_connection()
         cursor = conn.cursor()
         
+        allowed_fields = {
+            "username",
+            "full_name",
+            "email",
+            "phone",
+            "student_id",
+            "section",
+            "address",
+            "age",
+            "gender",
+            "course_category",
+            "program_type",
+            "grade",
+            "course",
+            "status",
+            "user_role",
+        }
         fields = []
         values = []
         for key, value in kwargs.items():
-            if value is not None:
+            if key in allowed_fields and value is not None:
                 fields.append(f"{key} = %s")
                 values.append(value)
         

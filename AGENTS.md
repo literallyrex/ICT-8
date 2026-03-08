@@ -76,6 +76,7 @@ Migration scripts are manual and not idempotent. Back up the database first.
 ```powershell
 python -m migrations.migrate_program_schedules
 python -m migrations.migrate_v8
+python -m migrations.migrate_v9
 python -m migrations.migrate_sections
 ```
 
@@ -133,7 +134,7 @@ Main tables created in `database/database.py`:
 
 ## Data flow
 
-1. Student registers and must select a program category and, when applicable, a program type or specialization.
+1. Student registers and must select a program category and, when applicable, a program type.
 2. New student accounts are stored with `Pending` status.
 3. Admin creates sections and program-based section schedules.
 4. Admin approves students, assigns grade level and section, and grade records are initialized.
@@ -147,7 +148,6 @@ Main tables created in `database/database.py`:
   - `STE`
   - `SPJ`
   - `SPA`
-  - SPA specializations: `Dancing`, `Theatre`, `Arts`, `Music`
 
 Subject initialization differs by program. See `initialize_grades()` and related grade logic in `database/database.py` and `services/grade_service.py`.
 

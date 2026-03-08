@@ -56,7 +56,6 @@ class AuthController:
         gender = payload.get("gender", "")
         category = payload.get("course_category", "")
         program = payload.get("program_type", "N/A")
-        specialization = payload.get("specialization", "N/A")
 
         if gender.startswith("Select"):
             return {"success": False, "message": "Please select your gender."}
@@ -64,8 +63,6 @@ class AuthController:
             return {"success": False, "message": "Please select a program category before registering."}
         if category == "Special Programs" and program.startswith("Select"):
             return {"success": False, "message": "Please select a special program type (STE, SPJ, or SPA)."}
-        if program == "SPA" and specialization.startswith("Select"):
-            return {"success": False, "message": "Please select an SPA specialization."}
 
         if not all([username, password, full_name, email, phone, student_id, address, age]):
             return {"success": False, "message": "All fields are required."}
@@ -121,7 +118,6 @@ class AuthController:
             gender=gender,
             course_category=category,
             program_type=program,
-            specialization=specialization,
             grade="Pending",
         )
 
