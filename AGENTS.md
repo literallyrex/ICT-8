@@ -44,6 +44,20 @@ pip install matplotlib Pillow geopy
 python main.py
 ```
 
+### Build the Windows EXE
+
+Use the provided spec file or helper script so Tcl/Tk data is bundled correctly:
+
+```powershell
+.\build_exe.bat
+```
+
+This generates:
+
+```text
+dist\StudentRegistrationSystem.exe
+```
+
 ### Lint / format
 
 No linting or formatting tool is configured in the repository. Do not invent `ruff`, `flake8`, or `black` commands unless you add that tooling first.

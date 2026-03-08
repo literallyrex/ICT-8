@@ -105,6 +105,20 @@ pip install matplotlib Pillow geopy
 python main.py
 ```
 
+## Build EXE
+
+Use the included spec file and batch script so Tcl/Tk is bundled correctly for CustomTkinter:
+
+```powershell
+.\build_exe.bat
+```
+
+The generated file will be:
+
+```text
+dist\StudentRegistrationSystem.exe
+```
+
 ## Run Tests
 
 Tests use a real MySQL database, so make sure XAMPP MySQL is running first.
