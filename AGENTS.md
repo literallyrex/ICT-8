@@ -4,46 +4,69 @@ This file provides guidance to WARP (warp.dev) when working with code in this re
 
 ## Project Overview
 
-A **Student Registration System** — a desktop GUI application for a Philippine junior high school. Students self-register and await admin approval. Admins manage users, grades, attendance, schedules, and announcements. Built with Python, CustomTkinter, and MySQL (XAMPP).
+A Student Registration System desktop GUI application for a Philippine junior high school. Students self-register and wait for admin approval. Admins manage users, grades, attendance, sections, schedule templates, analytics, and announcements.
+
+Built with:
+
+- Python
+- CustomTkinter
+- MySQL via `mysql-connector-python`
+- XAMPP MySQL on `127.0.0.1`
 
 ## Prerequisites
 
-- Python 3.13+ with a virtual environment in `.venv`
-- XAMPP with MySQL running on `127.0.0.1` (root, no password)
+- Python 3.13+
+- A virtual environment in `.venv`
+- XAMPP with MySQL running on `127.0.0.1`
 - The database `registration_db` is auto-created by `initialize_db()`
-- `requirements.txt` is not fully complete for the full GUI: `main.py` also requires `matplotlib`, `Pillow` (for logo/image loading), and optionally `geopy` (for map reverse-geocoding). Install them manually if missing: `pip install matplotlib Pillow geopy`
+
+`requirements.txt` is not fully complete for the whole GUI. Install these manually if needed:
+
+```powershell
+pip install matplotlib Pillow geopy
+```
+
+`tkintermapview` is used for the map picker and is already listed in `requirements.txt`.
 
 ## Commands
 
 ### Install dependencies
-```
+
+```powershell
 .venv\Scripts\activate
 pip install -r requirements.txt
+pip install matplotlib Pillow geopy
 ```
 
 ### Run the application
-There is no build step; the desktop app is launched directly.
-```
+
+```powershell
 python main.py
 ```
 
 ### Lint / format
+
 No linting or formatting tool is configured in the repository. Do not invent `ruff`, `flake8`, or `black` commands unless you add that tooling first.
 
 ### Run tests
-Tests require a live MySQL instance (XAMPP running). They create and clean up real database records.
-```
+
+Tests require a live MySQL instance. They create and clean up real database records.
+
+```powershell
 python -m unittest test_core.py
 ```
 
 Run a single test:
-```
+
+```powershell
 python -m unittest test_core.TestRegistration.test_schedule_conflicts
 ```
 
 ### Run database migrations
-Migrations are standalone scripts run manually in order. They are **not idempotent** — most truncate and re-seed data. Always back up first.
-```
+
+Migration scripts are manual and not idempotent. Back up the database first.
+
+```powershell
 python -m migrations.migrate_program_schedules
 python -m migrations.migrate_v8
 python -m migrations.migrate_sections
@@ -51,55 +74,96 @@ python -m migrations.migrate_sections
 
 ## Architecture
 
-### Core modules (all in project root, no packages)
+### Current layout
 
-- **`main.py`** — The entire GUI in a single `App(ctk.CTk)` class. Contains login, student registration, admin dashboard (user management, sections, schedule templates, analytics tabs), student dashboard (profile, grades, attendance, timetable, settings tabs), map picker, validation helpers, and UI animation helpers. This file is ~2500 lines.
-- The app entrypoint is at the bottom of `main.py`: it calls `initialize_db()` and then starts `App().mainloop()`.
-- **`database.py`** — All MySQL operations. Each function opens and closes its own connection via `get_connection()`. Defines table schemas in `initialize_db()` and provides CRUD for: `users`, `announcements`, `grades`, `attendance`, `timetable`, `schedules`, `audit_logs`, `program_schedules`, `sections`, `section_schedules`. Also contains recurring schedule occurrence logic (`_iter_occurrences`).
-- **`auth.py`** — Single function: `hash_password()` using SHA-256.
-- **`config.py`** — MySQL connection dict (`db_config`). Default: localhost/root/no password/registration_db.
+- `main.py`
+  - Thin app shell
+  - Configures Tk/Matplotlib startup
+  - Creates controllers and views
+  - Starts the app and handles top-level navigation
+- `views/`
+  - CustomTkinter UI screens and dialogs
+  - `base_view.py` contains shared UI helpers such as animations, dialog close setup, and map picker behavior
+- `controllers/`
+  - Auth flow
+  - Student dashboard flow
+  - Admin dashboard flow
+- `services/`
+  - Reusable business logic for grades, attendance, and schedules
+- `database/database.py`
+  - MySQL connection helpers and CRUD/database operations
+  - Table creation in `initialize_db()`
+  - Schedule recurrence/conflict helpers
+- `utils/`
+  - `auth.py` for password hashing
+  - `config.py` for DB config
+  - `constants.py` for app/theme constants
+  - `validation.py` for shared validators
+- `migrations/`
+  - Manual database migration scripts
+- `archive/`
+  - Non-runtime diagnostics and generated artifacts grouped out of the main app
 
-### Database tables
+### Compatibility shims
 
-The key tables (created in `database.initialize_db()`):
-- `users` — Central table. Stores credentials, profile, enrollment info (course_category, program_type, specialization), grade level, section, approval status.
-- `grades` — Per-subject quarterly grades (q1–q4) with auto-computed final. Foreign key to users (CASCADE delete).
-- `attendance` — Daily records per student with UNIQUE(user_id, date).
-- `program_schedules` — Schedule templates per program type (STE, Regular, SPJ, SPA). Seeded by `migrations/migrate_program_schedules.py`. Used as templates when creating new sections.
-- `sections` — Named sections created by the admin (e.g. "Rizal", "Newton"). Each stores a `program_type` indicating which template was used. Created/managed in the admin Sections tab.
-- `section_schedules` — Per-section timetable rows (FK to sections, CASCADE delete). Initially copied from `program_schedules` template, then independently editable.
-- `schedules` — Per-user recurring events with conflict detection.
-- `announcements` — Admin-posted messages visible to all students.
-- `audit_logs` — Action log for admin operations.
+- Root `auth.py` and `config.py` are thin compatibility shims for older scripts/tests that still import those names directly.
+- Tests still import `validate_phone` and `validate_email` from `main.py`, so keep those imports available there.
 
-### Data flow
+## Database tables
 
-1. Student registers → must select a program category (and sub-type/specialization if applicable) → status = "Pending", grade = "Pending"
-2. Admin creates sections in the Sections tab (choosing a program schedule template), then approves students → assigns grade level and selects a section from the dropdown → `initialize_grades()` seeds subject rows based on program type → status = "Approved"
-3. Admin edits quarterly grades → final is auto-computed as average of available quarters
-4. Student dashboard displays profile, report card, attendance summary, and section-specific timetable (falls back to program template if no section schedule exists)
+Main tables created in `database/database.py`:
 
-### Program types
+- `users`
+- `announcements`
+- `grades`
+- `attendance`
+- `timetable`
+- `schedules`
+- `audit_logs`
+- `program_schedules`
+- `sections`
+- `section_schedules`
 
-- **Regular Program** — course = "REGULAR", has TLE and Science
-- **Special Programs**: STE (has Enhanced Science, Creative Tech, Research), SPJ, SPA (has specializations: Dancing, Theatre, Arts, Music)
+## Data flow
 
-Subject lists for grade initialization differ by program — see `initialize_grades()` and `get_required_subjects()` in `database.py`.
+1. Student registers and must select a program category and, when applicable, a program type or specialization.
+2. New student accounts are stored with `Pending` status.
+3. Admin creates sections and program-based section schedules.
+4. Admin approves students, assigns grade level and section, and grade records are initialized.
+5. Student dashboard loads profile, grades, attendance, timetable, announcements, and settings from the MVC layers.
 
-### Key patterns
+## Program types
 
-- All DB functions use the pattern: `try/get_connection()/execute/finally close`. No connection pooling.
-- Admin authentication uses a hardcoded password (`ADMIN_PASSWORD = "12345"` in `main.py`), separate from the user table.
-- Phone validation requires Philippine format: `+63` followed by 10 digits.
-- The map picker uses `tkintermapview` with Google Maps tiles and `geopy.Nominatim` for geocoding. Both are optional — the app degrades gracefully if they're unavailable.
-- `main.py` uses `concurrent.futures.ThreadPoolExecutor` for background geocoding tasks to avoid blocking the Tkinter event loop.
-- Migration scripts in `migrations/` (`migrate_v*.py`) modify schema and data directly. `migrations/migrate_v8.py` creates a backup table before altering columns. `migrations/migrate_sections.py` creates the `sections`/`section_schedules` tables and migrates existing section names from users into proper section records.
-- Registration validation requires all dropdowns (gender, program category, program type, specialization) to be explicitly selected before submission.
-- Admin assigns sections via dropdown (populated from the `sections` table) rather than free-text input, both when approving and editing students.
+- Regular Program
+  - Stored course value: `REGULAR`
+- Special Programs
+  - `STE`
+  - `SPJ`
+  - `SPA`
+  - SPA specializations: `Dancing`, `Theatre`, `Arts`, `Music`
 
-### Test conventions
+Subject initialization differs by program. See `initialize_grades()` and related grade logic in `database/database.py` and `services/grade_service.py`.
 
-- All tests are in `test_core.py` using `unittest.TestCase`.
-- Tests hit the real database — each test creates test records and cleans them up in try/except blocks.
-- Tests import `validate_phone` and `validate_email` from `main.py`.
-- Because tests import from `main.py`, running tests also requires the GUI/runtime imports in that file to be available, not just `database.py`.
+## Key patterns
+
+- Views should stay focused on UI composition and dialog flow.
+- Controllers should handle action flow and call services/database helpers.
+- Services should contain reusable business logic instead of widget code.
+- All DB functions still follow the open connection -> execute -> close pattern. There is no pooling.
+- Admin authentication is still a configured constant in `utils/constants.py`, not a row in the `users` table.
+- Phone validation expects `+63` followed by 10 digits.
+- The map picker uses `tkintermapview` and optional `geopy` reverse geocoding. The app should degrade gracefully if those imports are unavailable.
+- `main.py` still exposes `validate_phone` and `validate_email` by importing them from `utils.validation`.
+
+## Test conventions
+
+- Tests live in `test_core.py`
+- Tests use `unittest.TestCase`
+- Tests hit the real database
+- Tests import from `main.py`, so GUI/runtime imports must still be available when tests run
+
+## Notes for future edits
+
+- Keep `main.py` small. New app logic should usually go into controllers or services, not back into the app shell.
+- If you move root compatibility shims like `auth.py` or `config.py`, update old scripts and tests first.
+- If you move migration files again, update command examples in this file and in `README.md`.
