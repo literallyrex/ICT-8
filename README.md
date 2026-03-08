@@ -157,3 +157,4 @@ Main tables used by the system:
 ## Status
 
 This project has been refactored from a monolithic GUI file into an MVC-style structure to make it easier to maintain and extend.
+Totally not vibecoded
