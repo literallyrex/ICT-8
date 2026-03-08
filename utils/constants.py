@@ -1,0 +1,12 @@
+APP_TITLE = "Libertad National High School - Student Registration System"
+SCHOOL_NAME = "Libertad National High School"
+ADMIN_PASSWORD = "12345"
+
+PRIMARY = "#1F6AA5"
+SUCCESS = "#2FA572"
+DANGER = "#E04545"
+WARNING = "#E0A045"
+BG_DARK = "#1A1A2E"
+BG_CARD = "#16213E"
+ACCENT = "#0F3460"
+TEXT_MUTED = "#8892A0"
