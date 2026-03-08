@@ -27,6 +27,7 @@ class AdminDashboardView(BaseView):
         self.schedule_program_var = None
         self.schedule_container = None
         self._table_cols = []
+        self._actions_width = 250
 
     def show_dashboard(self):
         self.clear_window()
@@ -96,9 +97,16 @@ class AdminDashboardView(BaseView):
         header_frame = ctk.CTkFrame(tab_users, height=32, corner_radius=6, fg_color=ACCENT)
         header_frame.pack(fill="x", padx=15, pady=(0, 2))
         header_frame.pack_propagate(False)
+        ctk.CTkLabel(
+            header_frame,
+            text="Actions",
+            width=self._actions_width,
+            anchor="w",
+            font=("Roboto", 11, "bold"),
+            text_color="white",
+        ).pack(side="left", padx=4)
         for name, width in self._table_cols:
             ctk.CTkLabel(header_frame, text=name, width=width, anchor="w", font=("Roboto", 11, "bold"), text_color="white").pack(side="left", padx=4)
-        ctk.CTkLabel(header_frame, text="Actions", anchor="w", font=("Roboto", 11, "bold"), text_color="white").pack(side="left", padx=4, fill="x", expand=True)
 
         self.scroll_frame = ctk.CTkScrollableFrame(tab_users, corner_radius=8)
         self.scroll_frame.pack(fill="both", expand=True, padx=15, pady=(0, 10))
@@ -456,6 +464,14 @@ class AdminDashboardView(BaseView):
             widget.destroy()
         self.load_dashboard_users()
 
+    def _is_approved_status(self, status):
+        return status in {"Approved", "Verified"}
+
+    def _display_status(self, status):
+        if self._is_approved_status(status):
+            return "Approved"
+        return status or "N/A"
+
     def load_dashboard_users(self):
         data = self.admin_controller.get_user_management_data(
             search_query=self.search_var.get().strip() if self.search_var else "",
@@ -481,22 +497,15 @@ class AdminDashboardView(BaseView):
             row.pack(fill="x", pady=1)
             row.pack_propagate(False)
 
-            program = user.get("program_type", "") or ""
-            if program in ("N/A", ""):
-                program = "Regular"
-
-            cell_values = [str(user["id"]), user["username"], user.get("full_name", ""), program, user.get("grade", "") or "-", user.get("section", "") or "-"]
-            for value, (_, width) in zip(cell_values, self._table_cols):
-                ctk.CTkLabel(row, text=value, width=width, anchor="w", font=("Roboto", 11)).pack(side="left", padx=4)
-
             status = user.get("status", "N/A")
-            status_color = SUCCESS if status == "Approved" else WARNING
-            ctk.CTkLabel(row, text=f"? {status}", width=self._table_cols[-1][1], text_color=status_color, anchor="w", font=("Roboto", 11, "bold")).pack(side="left", padx=4)
+            status_display = self._display_status(status)
+            is_approved = self._is_approved_status(status)
 
-            action_frame = ctk.CTkFrame(row, fg_color="transparent")
-            action_frame.pack(side="right", padx=(4, 8))
+            action_frame = ctk.CTkFrame(row, fg_color="transparent", width=self._actions_width)
+            action_frame.pack(side="left", padx=(8, 4))
+            action_frame.pack_propagate(False)
 
-            if status != "Approved":
+            if not is_approved:
                 ctk.CTkButton(action_frame, text="Approve", width=72, height=button_height, corner_radius=button_radius, fg_color=SUCCESS, hover_color="#248A5E", font=("Roboto", 10), command=lambda uid=user["id"]: self.approve_user(uid)).pack(side="left", padx=1)
             else:
                 ctk.CTkButton(action_frame, text="Grades", width=52, height=button_height, corner_radius=button_radius, fg_color=ACCENT, hover_color="#0A2647", font=("Roboto", 10), command=lambda uid=user["id"]: self.admin_edit_grades(uid)).pack(side="left", padx=1)
@@ -505,6 +514,17 @@ class AdminDashboardView(BaseView):
             ctk.CTkButton(action_frame, text="Edit", width=40, height=button_height, corner_radius=button_radius, fg_color=PRIMARY, hover_color="#185A8C", font=("Roboto", 10), command=lambda current_user=user: self.edit_user(current_user)).pack(side="left", padx=1)
             ctk.CTkButton(action_frame, text="View", width=42, height=button_height, corner_radius=button_radius, fg_color=ACCENT, hover_color="#0A2647", font=("Roboto", 10), command=lambda current_user=user: self.view_user_details(current_user)).pack(side="left", padx=1)
             ctk.CTkButton(action_frame, text="X", width=28, height=button_height, corner_radius=button_radius, fg_color=DANGER, hover_color="#C03030", font=("Roboto", 10), command=lambda uid=user["id"]: self.delete_user_action(uid)).pack(side="left", padx=1)
+
+            program = user.get("program_type", "") or ""
+            if program in ("N/A", ""):
+                program = "Regular"
+
+            cell_values = [str(user["id"]), user["username"], user.get("full_name", ""), program, user.get("grade", "") or "-", user.get("section", "") or "-"]
+            for value, (_, width) in zip(cell_values, self._table_cols):
+                ctk.CTkLabel(row, text=value, width=width, anchor="w", font=("Roboto", 11)).pack(side="left", padx=4)
+
+            status_color = SUCCESS if is_approved else WARNING
+            ctk.CTkLabel(row, text=status_display, width=self._table_cols[-1][1], text_color=status_color, anchor="w", font=("Roboto", 11, "bold")).pack(side="left", padx=4)
 
             row.after(index * 20, lambda widget=row: self.slide_in_frame(widget, start_y=10, step=4))
     def view_user_details(self, user_data):
@@ -539,8 +559,10 @@ class AdminDashboardView(BaseView):
             row = ctk.CTkFrame(info_frame, fg_color="transparent")
             row.pack(fill="x", padx=15, pady=4)
             ctk.CTkLabel(row, text=f"{label}:", font=("Roboto", 12, "bold"), width=110, anchor="w").pack(side="left")
-            color = SUCCESS if value == "Approved" else (WARNING if value == "Pending" else None)
+            normalized_value = self._display_status(value) if label == "Status" else value
+            color = SUCCESS if self._is_approved_status(value) else (WARNING if value == "Pending" else None)
             kwargs = {"text": str(value), "font": ("Roboto", 12), "anchor": "w"}
+            kwargs["text"] = str(normalized_value)
             if color:
                 kwargs["text_color"] = color
             ctk.CTkLabel(row, **kwargs).pack(side="left", fill="x", expand=True)
