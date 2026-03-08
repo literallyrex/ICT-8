@@ -106,7 +106,7 @@ python main.py
 
 ## Build EXE
 
-Use the included spec file and batch script so Tcl/Tk is bundled correctly for CustomTkinter:
+Use the included batch script so Tcl/Tk is bundled correctly for CustomTkinter:
 
 ```powershell
 .\build_exe.bat

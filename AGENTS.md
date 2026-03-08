@@ -39,7 +39,7 @@ python main.py
 
 ### Build the Windows EXE
 
-Use the provided spec file or helper script so Tcl/Tk data is bundled correctly:
+Use the provided helper script so Tcl/Tk data is bundled correctly:
 
 ```powershell
 .\build_exe.bat
