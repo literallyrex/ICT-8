@@ -118,10 +118,10 @@ python -m migrations.migrate_sections
 - `archive/`
   - Non-runtime diagnostics and generated artifacts grouped out of the main app
 
-### Compatibility shims
+### Test/runtime compatibility
 
-- Root `auth.py` and `config.py` are thin compatibility shims for older scripts/tests that still import those names directly.
 - Tests still import `validate_phone` and `validate_email` from `main.py`, so keep those imports available there.
+- App code should import config and auth helpers from `utils.config` and `utils.auth` directly.
 
 ## Database tables
 
@@ -179,5 +179,4 @@ Subject initialization differs by program. See `initialize_grades()` and related
 ## Notes for future edits
 
 - Keep `main.py` small. New app logic should usually go into controllers or services, not back into the app shell.
-- If you move root compatibility shims like `auth.py` or `config.py`, update old scripts and tests first.
 - If you move migration files again, update command examples in this file and in `README.md`.

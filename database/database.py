@@ -1,7 +1,7 @@
 import mysql.connector
 import datetime
 import calendar
-from config import db_config
+from utils.config import db_config
 
 def get_connection():
     return mysql.connector.connect(**db_config)

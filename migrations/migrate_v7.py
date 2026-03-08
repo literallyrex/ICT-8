@@ -1,5 +1,5 @@
 import mysql.connector
-from config import db_config
+from utils.config import db_config
 
 def migrate_v7():
     """Add age, gender, course_category, program_type, specialization, and year_level to users table."""

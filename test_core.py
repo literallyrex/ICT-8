@@ -1,10 +1,10 @@
 import unittest
 import database
-import auth
 import mysql.connector
 import sys
 import os
 import datetime
+from utils import auth
 
 # Add parent dir to path for imports
 sys.path.insert(0, os.path.dirname(__file__))
@@ -421,8 +421,9 @@ class TestRegistration(unittest.TestCase):
         self.assertNotIn("Creative Tech", reg_subjects)
 
     def test_program_schedules(self):
-        import migrate_program_schedules
-        migrate_program_schedules.migrate_program_schedules()
+        from migrations.migrate_program_schedules import migrate_program_schedules
+
+        migrate_program_schedules()
         
         # Test STE Schedule
         ste_sched = database.get_program_schedule("STE")

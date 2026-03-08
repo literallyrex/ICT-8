@@ -1,5 +1,5 @@
 import mysql.connector
-from config import db_config
+from utils.config import db_config
 
 def migrate():
     try:
