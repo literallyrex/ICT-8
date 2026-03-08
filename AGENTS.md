@@ -20,13 +20,7 @@ Built with:
 - XAMPP with MySQL running on `127.0.0.1`
 - The database `registration_db` is auto-created by `initialize_db()`
 
-`requirements.txt` is not fully complete for the whole GUI. Install these manually if needed:
-
-```powershell
-pip install matplotlib Pillow geopy
-```
-
-`tkintermapview` is used for the map picker and is already listed in `requirements.txt`.
+`requirements.txt` includes the app runtime packages and the PyInstaller build packages used by `build_exe.bat`.
 
 ## Commands
 
@@ -35,7 +29,6 @@ pip install matplotlib Pillow geopy
 ```powershell
 .venv\Scripts\activate
 pip install -r requirements.txt
-pip install matplotlib Pillow geopy
 ```
 
 ### Run the application

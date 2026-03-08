@@ -96,7 +96,6 @@ The database is created automatically on startup through `initialize_db()`.
 
 ```powershell
 pip install -r requirements.txt
-pip install matplotlib Pillow geopy
 ```
 
 ## Run the Application
