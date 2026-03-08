@@ -2,6 +2,7 @@
 setlocal
 
 cd /d "%~dp0"
+set "PROJECT_DIR=%CD%"
 
 if not exist ".venv\Scripts\python.exe" (
     echo Virtual environment not found at .venv\Scripts\python.exe
@@ -28,7 +29,7 @@ set "TCL_LIBRARY=%TCL_DIR%"
 set "TK_LIBRARY=%TK_DIR%"
 
 python -m PyInstaller --clean --noconfirm --specpath "build" --onefile --windowed --name "StudentRegistrationSystem" ^
-  --add-data "logo.png;." ^
+  --add-data "%PROJECT_DIR%\logo.png;." ^
   --add-data "%TCL_DIR%;_tcl_data" ^
   --add-data "%TK_DIR%;_tk_data" ^
   --hidden-import=tkinter ^
@@ -44,7 +45,7 @@ python -m PyInstaller --clean --noconfirm --specpath "build" --onefile --windowe
   --collect-all matplotlib ^
   --collect-all mysql ^
   --collect-all geopy ^
-  main.py
+  "%PROJECT_DIR%\main.py"
 
 if errorlevel 1 (
     echo.
