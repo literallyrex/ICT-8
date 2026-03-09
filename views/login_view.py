@@ -2,6 +2,7 @@ import customtkinter as ctk
 import tkinter.messagebox as messagebox
 
 from utils.constants import ACCENT, DANGER, PRIMARY, SCHOOL_NAME, TEXT_MUTED
+from utils.theme import apply_theme_to_app, apply_widget_colors
 from views.base_view import BaseView
 
 
@@ -79,7 +80,9 @@ class LoginView(BaseView):
         result = self.auth_controller.login_student(self.login_username.get(), self.login_password.get())
         if result.get("success"):
             self.app.current_user = result["user"]
+            apply_theme_to_app(self.app, self.app.current_user)
             self.show_student_dashboard()
+            apply_widget_colors(self.app, self.app.current_user)
             return
 
         if result.get("level") == "warning":

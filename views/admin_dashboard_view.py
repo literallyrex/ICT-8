@@ -28,6 +28,7 @@ class AdminDashboardView(BaseView):
         self.schedule_container = None
         self._table_cols = []
         self._actions_width = 250
+        self.user_picture_image = None
 
     def show_dashboard(self):
         self.clear_window()
@@ -529,6 +530,26 @@ class AdminDashboardView(BaseView):
         self.setup_dialog_close(window)
 
         ctk.CTkLabel(window, text="User Details", font=("Roboto", 20, "bold")).pack(pady=(20, 15))
+
+        picture_frame = ctk.CTkFrame(window, width=150, height=150, corner_radius=12)
+        picture_frame.pack(pady=(0, 12))
+        picture_frame.pack_propagate(False)
+
+        picture_result = self.admin_controller.load_profile_picture(user_data.get("profile_picture"), size=(140, 140))
+        if picture_result.get("success") and picture_result.get("image") is not None:
+            self.user_picture_image = ctk.CTkImage(
+                light_image=picture_result["image"],
+                dark_image=picture_result["image"],
+                size=(140, 140),
+            )
+            ctk.CTkLabel(picture_frame, text="", image=self.user_picture_image).pack(expand=True)
+        else:
+            self.user_picture_image = None
+            placeholder_text = "No Profile\nPicture"
+            if user_data.get("profile_picture"):
+                placeholder_text = "Profile Picture\nMissing"
+            ctk.CTkLabel(picture_frame, text=placeholder_text, font=("Roboto", 12), justify="center").pack(expand=True)
+
         info_frame = ctk.CTkFrame(window, corner_radius=12)
         info_frame.pack(fill="x", padx=25, pady=(0, 15))
 

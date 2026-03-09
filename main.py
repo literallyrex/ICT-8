@@ -2,6 +2,7 @@ import concurrent.futures
 import datetime
 import os
 import sys
+import tkinter as tk
 
 if sys.platform == "win32":
     base_path = sys.base_prefix
@@ -42,6 +43,7 @@ class App(ctk.CTk):
 
         self.logo_large = None
         self.logo_small = None
+        self.window_icon = None
         self._load_school_logo()
 
         self.auth_controller = AuthController()
@@ -61,14 +63,25 @@ class App(ctk.CTk):
             widget.destroy()
 
     def _load_school_logo(self):
-        logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo.png")
+        logo_path = self._resource_path("logo.png")
         try:
-            logo_image = Image.open(logo_path)
+            with Image.open(logo_path) as image:
+                logo_image = image.copy()
             self.logo_large = ctk.CTkImage(light_image=logo_image, dark_image=logo_image, size=(60, 60))
             self.logo_small = ctk.CTkImage(light_image=logo_image, dark_image=logo_image, size=(36, 36))
         except Exception:
             self.logo_large = None
             self.logo_small = None
+
+        try:
+            self.window_icon = tk.PhotoImage(file=logo_path)
+            self.iconphoto(True, self.window_icon)
+        except Exception:
+            self.window_icon = None
+
+    def _resource_path(self, *parts):
+        base_dir = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+        return os.path.join(base_dir, *parts)
 
     def setup_dialog_close(self, window):
         window.bind("<Escape>", lambda _event: window.destroy())

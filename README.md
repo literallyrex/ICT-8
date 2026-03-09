@@ -6,12 +6,16 @@ A desktop GUI application for a Philippine junior high school, built with Python
 
 - Student account registration and login
 - Admin login and student approval flow
+- Student profile picture upload with image preview
+- Friends system with student search and friend requests
+- Chat messaging between accepted friends
 - Student dashboard with:
   - Profile
   - Grades
   - Attendance
   - Timetable
-  - Settings
+  - Friends & Chat
+  - Settings (with UI Customization)
 - Gamification-based student ranking
 - Admin tools for:
   - User management
@@ -98,15 +102,41 @@ The database is created automatically on startup through `initialize_db()`.
 pip install -r requirements.txt
 ```
 
+Pillow is already included in `requirements.txt` and is used for profile picture resizing and preview.
+
 ## Run the Application
 
 ```powershell
 python main.py
 ```
 
+## Profile Picture Upload
+
+- During student registration, click `Upload Profile Picture`.
+- Supported file types are `JPG`, `JPEG`, and `PNG`.
+- The app resizes the selected image, shows a preview in the form, and saves it inside `profile_pictures/`.
+- The saved relative path is stored in the `users.profile_picture` column.
+- When the student logs in later, the saved profile picture is shown in the Profile tab.
+
+## UI Customization
+
+- Students can personalize the application's appearance from the `Settings` tab.
+- Options include Primary UI Color, Button Color, Dark/Light Mode, Background Style, and Profile Accent Color.
+- Changes are applied instantly for a live preview.
+- Settings are saved to the `users` table in the database and automatically restored on the next login.
+
+## Friends and Chat
+
+- Students can search for other approved students by name or username in the `Friends & Chat` tab.
+- Clicking `Add Friend` sends a pending friend request.
+- Incoming requests can be accepted or rejected from the same tab.
+- Accepted connections appear in the friends list sidebar.
+- Students can open a conversation with any accepted friend and send messages.
+- The chat area refreshes automatically every few seconds to load new messages and requests.
+
 ## Build EXE
 
-Use the included batch script so Tcl/Tk is bundled correctly for CustomTkinter:
+Use the included batch script so Tcl/Tk is bundled correctly for CustomTkinter. The script also converts `logo.png` into a Windows `.ico` file and uses it as the EXE icon:
 
 ```powershell
 .\build_exe.bat
@@ -144,6 +174,9 @@ Examples:
 python -m migrations.migrate_program_schedules
 python -m migrations.migrate_v8
 python -m migrations.migrate_v9
+python -m migrations.migrate_v10
+python -m migrations.migrate_v11
+python -m migrations.migrate_v12
 python -m migrations.migrate_sections
 ```
 
@@ -167,6 +200,9 @@ Main tables used by the system:
 - `sections`
 - `section_schedules`
 - `audit_logs`
+- `friend_requests`
+- `friends`
+- `messages`
 
 ## Status
 

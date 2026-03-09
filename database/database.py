@@ -42,9 +42,38 @@ def initialize_db():
                 gender VARCHAR(20),
                 course_category VARCHAR(50),
                 program_type VARCHAR(50),
-                section VARCHAR(20) DEFAULT NULL
+                section VARCHAR(20) DEFAULT NULL,
+                profile_picture VARCHAR(255) DEFAULT NULL
             )
         """)
+
+        cursor.execute("SHOW COLUMNS FROM users LIKE 'profile_picture'")
+        if not cursor.fetchone():
+            cursor.execute("ALTER TABLE users ADD COLUMN profile_picture VARCHAR(255) DEFAULT NULL AFTER section")
+
+        cursor.execute("SHOW COLUMNS FROM users LIKE 'ui_color'")
+        if not cursor.fetchone():
+            cursor.execute("ALTER TABLE users ADD COLUMN ui_color VARCHAR(50) DEFAULT 'Blue'")
+            
+        cursor.execute("SHOW COLUMNS FROM users LIKE 'button_color'")
+        if not cursor.fetchone():
+            cursor.execute("ALTER TABLE users ADD COLUMN button_color VARCHAR(50) DEFAULT 'Standard'")
+            
+        cursor.execute("SHOW COLUMNS FROM users LIKE 'theme_mode'")
+        if not cursor.fetchone():
+            cursor.execute("ALTER TABLE users ADD COLUMN theme_mode VARCHAR(20) DEFAULT 'Dark'")
+            
+        cursor.execute("SHOW COLUMNS FROM users LIKE 'background_style'")
+        if not cursor.fetchone():
+            cursor.execute("ALTER TABLE users ADD COLUMN background_style VARCHAR(50) DEFAULT 'Solid'")
+            
+        cursor.execute("SHOW COLUMNS FROM users LIKE 'profile_accent_color'")
+        if not cursor.fetchone():
+            cursor.execute("ALTER TABLE users ADD COLUMN profile_accent_color VARCHAR(50) DEFAULT 'Blue'")
+
+        cursor.execute("SHOW COLUMNS FROM users LIKE 'text_color'")
+        if not cursor.fetchone():
+            cursor.execute("ALTER TABLE users ADD COLUMN text_color VARCHAR(50) DEFAULT 'Default'")
         
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS announcements (
@@ -154,6 +183,46 @@ def initialize_db():
                 FOREIGN KEY (section_id) REFERENCES sections(id) ON DELETE CASCADE
             )
         """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS friend_requests (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                sender_id INT NOT NULL,
+                receiver_id INT NOT NULL,
+                status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+                INDEX idx_friend_requests_sender_status (sender_id, status),
+                INDEX idx_friend_requests_receiver_status (receiver_id, status)
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS friends (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user1_id INT NOT NULL,
+                user2_id INT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user1_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (user2_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE KEY uq_friends_pair (user1_id, user2_id)
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS messages (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                sender_id INT NOT NULL,
+                receiver_id INT NOT NULL,
+                message_text TEXT NOT NULL,
+                sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+                INDEX idx_messages_sender_time (sender_id, sent_at),
+                INDEX idx_messages_receiver_time (receiver_id, sent_at)
+            )
+        """)
         conn.commit()
         conn.close()
     except mysql.connector.Error as err:
@@ -176,16 +245,17 @@ def add_user(username, password_hash, full_name, email, phone, role, **kwargs):
         course_category = kwargs.get('course_category')
         program_type = kwargs.get('program_type')
         section = kwargs.get('section')
+        profile_picture = kwargs.get('profile_picture')
 
         query = """INSERT INTO users 
                    (username, password_hash, full_name, email, phone, user_role, 
                     address, student_id, course, status, grade, age, gender, 
-                    course_category, program_type, section) 
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+                    course_category, program_type, section, profile_picture) 
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
         
         cursor.execute(query, (username, password_hash, full_name, email, phone, role,
                                address, student_id, course, status, grade,
-                               age, gender, course_category, program_type, section))
+                               age, gender, course_category, program_type, section, profile_picture))
         conn.commit()
         return True
     except mysql.connector.Error as err:
@@ -577,6 +647,13 @@ def update_user_details(user_id, **kwargs):
             "course",
             "status",
             "user_role",
+            "profile_picture",
+            "ui_color",
+            "button_color",
+            "theme_mode",
+            "background_style",
+            "profile_accent_color",
+            "text_color",
         }
         fields = []
         values = []
@@ -648,6 +725,269 @@ def delete_announcement(announcement_id):
         cursor.execute(query, (announcement_id,))
         conn.commit()
         return cursor.rowcount > 0
+    except mysql.connector.Error:
+        return False
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+
+
+def _normalize_friend_pair(user_a, user_b):
+    return (user_a, user_b) if user_a < user_b else (user_b, user_a)
+
+
+def search_student_directory(search_query="", exclude_user_id=None):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        query = """
+            SELECT id, username, full_name, grade, section, profile_picture
+            FROM users
+            WHERE user_role = 'Student' AND status = 'Approved'
+        """
+        params = []
+        if exclude_user_id is not None:
+            query += " AND id != %s"
+            params.append(exclude_user_id)
+        if search_query:
+            query += " AND (full_name LIKE %s OR username LIKE %s)"
+            like_value = f"%{search_query}%"
+            params.extend([like_value, like_value])
+        query += " ORDER BY full_name ASC, username ASC LIMIT 25"
+        cursor.execute(query, tuple(params))
+        return cursor.fetchall()
+    except mysql.connector.Error:
+        return []
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+
+
+def get_incoming_friend_requests(user_id):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT fr.*, u.username, u.full_name, u.grade, u.section, u.profile_picture
+            FROM friend_requests fr
+            JOIN users u ON u.id = fr.sender_id
+            WHERE fr.receiver_id = %s AND fr.status = 'pending'
+            ORDER BY fr.created_at DESC, fr.id DESC
+            """,
+            (user_id,),
+        )
+        return cursor.fetchall()
+    except mysql.connector.Error:
+        return []
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+
+
+def get_outgoing_friend_requests(user_id):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT fr.*, u.username, u.full_name, u.grade, u.section, u.profile_picture
+            FROM friend_requests fr
+            JOIN users u ON u.id = fr.receiver_id
+            WHERE fr.sender_id = %s AND fr.status = 'pending'
+            ORDER BY fr.created_at DESC, fr.id DESC
+            """,
+            (user_id,),
+        )
+        return cursor.fetchall()
+    except mysql.connector.Error:
+        return []
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+
+
+def get_friend_request_by_id(request_id):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM friend_requests WHERE id = %s", (request_id,))
+        return cursor.fetchone()
+    except mysql.connector.Error:
+        return None
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+
+
+def get_pending_friend_request_between(user_a, user_b):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT *
+            FROM friend_requests
+            WHERE status = 'pending'
+              AND (
+                (sender_id = %s AND receiver_id = %s)
+                OR (sender_id = %s AND receiver_id = %s)
+              )
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (user_a, user_b, user_b, user_a),
+        )
+        return cursor.fetchone()
+    except mysql.connector.Error:
+        return None
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+
+
+def create_friend_request(sender_id, receiver_id):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO friend_requests (sender_id, receiver_id, status)
+            VALUES (%s, %s, 'pending')
+            """,
+            (sender_id, receiver_id),
+        )
+        conn.commit()
+        return cursor.lastrowid
+    except mysql.connector.Error:
+        return False
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+
+
+def update_friend_request_status(request_id, status):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE friend_requests SET status = %s WHERE id = %s AND status = 'pending'",
+            (status, request_id),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except mysql.connector.Error:
+        return False
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+
+
+def get_friendship(user_a, user_b):
+    user1_id, user2_id = _normalize_friend_pair(user_a, user_b)
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT * FROM friends WHERE user1_id = %s AND user2_id = %s",
+            (user1_id, user2_id),
+        )
+        return cursor.fetchone()
+    except mysql.connector.Error:
+        return None
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+
+
+def create_friendship(user_a, user_b):
+    user1_id, user2_id = _normalize_friend_pair(user_a, user_b)
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT IGNORE INTO friends (user1_id, user2_id)
+            VALUES (%s, %s)
+            """,
+            (user1_id, user2_id),
+        )
+        conn.commit()
+        return cursor.lastrowid or cursor.rowcount > 0
+    except mysql.connector.Error:
+        return False
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+
+
+def get_friends_list(user_id):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT
+                f.id AS friendship_id,
+                u.id,
+                u.username,
+                u.full_name,
+                u.grade,
+                u.section,
+                u.profile_picture,
+                f.created_at
+            FROM friends f
+            JOIN users u ON u.id = IF(f.user1_id = %s, f.user2_id, f.user1_id)
+            WHERE f.user1_id = %s OR f.user2_id = %s
+            ORDER BY u.full_name ASC, u.username ASC
+            """,
+            (user_id, user_id, user_id),
+        )
+        return cursor.fetchall()
+    except mysql.connector.Error:
+        return []
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+
+
+def get_conversation_messages(user_a, user_b):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT id, sender_id, receiver_id, message_text, sent_at
+            FROM messages
+            WHERE
+                (sender_id = %s AND receiver_id = %s)
+                OR
+                (sender_id = %s AND receiver_id = %s)
+            ORDER BY sent_at ASC, id ASC
+            """,
+            (user_a, user_b, user_b, user_a),
+        )
+        return cursor.fetchall()
+    except mysql.connector.Error:
+        return []
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
+
+
+def create_message(sender_id, receiver_id, message_text):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO messages (sender_id, receiver_id, message_text)
+            VALUES (%s, %s, %s)
+            """,
+            (sender_id, receiver_id, message_text),
+        )
+        conn.commit()
+        return cursor.lastrowid
     except mysql.connector.Error:
         return False
     finally:

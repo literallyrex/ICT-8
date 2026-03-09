@@ -1,3 +1,5 @@
+from tkinter import filedialog
+
 import customtkinter as ctk
 import tkinter.messagebox as messagebox
 
@@ -15,11 +17,15 @@ class RegisterView(BaseView):
         self.reg_category = None
         self.reg_program_type = None
         self.reg_address = None
+        self.reg_profile_picture_path = None
+        self.reg_profile_preview = None
+        self.reg_profile_preview_label = None
+        self.reg_profile_status_label = None
         self.row_marker = 0
 
     def show_register(self):
         self.clear_window()
-        self.geometry("520x920")
+        self.geometry("520x1040")
 
         frame = ctk.CTkFrame(self.app, corner_radius=15)
         frame.grid(row=0, column=0, sticky="nsew", padx=40, pady=20)
@@ -34,6 +40,36 @@ class RegisterView(BaseView):
 
         ctk.CTkLabel(frame, text="Fill in all fields to create your account", font=("Roboto", 12), text_color=TEXT_MUTED).grid(row=1, column=0, pady=(0, 8))
 
+        self.reg_profile_picture_path = None
+        self.reg_profile_preview = None
+
+        picture_frame = ctk.CTkFrame(frame, corner_radius=12)
+        picture_frame.grid(row=2, column=0, pady=(0, 12))
+
+        ctk.CTkLabel(picture_frame, text="Profile Picture", font=("Roboto", 13, "bold"), text_color=PRIMARY).pack(pady=(12, 6))
+
+        preview_frame = ctk.CTkFrame(picture_frame, width=160, height=160, corner_radius=12)
+        preview_frame.pack(padx=20, pady=(0, 8))
+        preview_frame.pack_propagate(False)
+
+        self.reg_profile_preview_label = ctk.CTkLabel(preview_frame, text="No image\nselected", font=("Roboto", 12), justify="center")
+        self.reg_profile_preview_label.pack(expand=True)
+
+        ctk.CTkButton(
+            picture_frame,
+            text="Upload Profile Picture",
+            command=self.select_profile_picture,
+            width=220,
+            height=36,
+            corner_radius=10,
+            fg_color=ACCENT,
+            hover_color="#0A2647",
+            font=("Roboto", 12, "bold"),
+        ).pack(pady=(0, 6))
+
+        self.reg_profile_status_label = ctk.CTkLabel(picture_frame, text="Supported formats: JPG, JPEG, PNG", font=("Roboto", 11), text_color=TEXT_MUTED)
+        self.reg_profile_status_label.pack(pady=(0, 12))
+
         self.reg_entries = {}
         field_defs = [
             ("username", "Username", None),
@@ -44,7 +80,7 @@ class RegisterView(BaseView):
             ("student_id", "Student ID", None),
         ]
 
-        row_index = 2
+        row_index = 3
         for key, placeholder, show_char in field_defs:
             kwargs = {"master": frame, "placeholder_text": placeholder, "width": 300, "height": 36, "corner_radius": 10}
             if show_char:
@@ -147,6 +183,44 @@ class RegisterView(BaseView):
             self.reg_program_type.grid(row=self.row_marker, column=0, pady=(0, 6))
             self.reg_program_type.set("Select Special Program")
 
+    def select_profile_picture(self):
+        file_path = filedialog.askopenfilename(
+            title="Select Profile Picture",
+            filetypes=[
+                ("Image Files", "*.jpg *.jpeg *.png"),
+                ("JPEG Files", "*.jpg *.jpeg"),
+                ("PNG Files", "*.png"),
+            ],
+        )
+        if not file_path:
+            return
+
+        username_hint = self.reg_entries.get("username").get().strip() if self.reg_entries.get("username") else "student"
+        result = self.auth_controller.upload_profile_picture(
+            file_path,
+            username_hint=username_hint or "student",
+            previous_path=self.reg_profile_picture_path,
+        )
+        if not result.get("success"):
+            messagebox.showerror("Image Error", result["message"])
+            return
+
+        self.reg_profile_picture_path = result["relative_path"]
+        preview_result = self.auth_controller.load_profile_picture(self.reg_profile_picture_path, size=(150, 150))
+        if preview_result.get("success") and preview_result.get("image") is not None:
+            self.reg_profile_preview = ctk.CTkImage(
+                light_image=preview_result["image"],
+                dark_image=preview_result["image"],
+                size=(150, 150),
+            )
+            self.reg_profile_preview_label.configure(text="", image=self.reg_profile_preview)
+            self.reg_profile_status_label.configure(text=f"Saved to: {self.reg_profile_picture_path}")
+            return
+
+        self.reg_profile_preview = None
+        self.reg_profile_preview_label.configure(text="Preview\nunavailable", image=None)
+        self.reg_profile_status_label.configure(text=result["relative_path"])
+
     def handle_register(self):
         payload = {
             "username": self.reg_entries["username"].get(),
@@ -160,6 +234,7 @@ class RegisterView(BaseView):
             "gender": self.reg_gender.get(),
             "course_category": self.reg_category.get(),
             "program_type": self.reg_program_type.get() if self.reg_category.get() == "Special Programs" else "N/A",
+            "profile_picture": self.reg_profile_picture_path,
         }
 
         result = self.auth_controller.register_student(payload)

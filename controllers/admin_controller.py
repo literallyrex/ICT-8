@@ -18,15 +18,16 @@ from database import (
     update_user_details,
     update_user_status,
 )
-from services import AttendanceService, GradeService, ScheduleService
+from services import AttendanceService, GradeService, ProfilePictureService, ScheduleService
 from utils.validation import validate_email, validate_phone
 
 
 class AdminController:
-    def __init__(self, grade_service=None, attendance_service=None, schedule_service=None):
+    def __init__(self, grade_service=None, attendance_service=None, schedule_service=None, profile_picture_service=None):
         self.grade_service = grade_service or GradeService()
         self.attendance_service = attendance_service or AttendanceService()
         self.schedule_service = schedule_service or ScheduleService()
+        self.profile_picture_service = profile_picture_service or ProfilePictureService()
 
     def get_user_management_data(self, search_query="", status_filter="All", program_filter="All", grade_filter="All", sort_by="id", sort_order="DESC"):
         users = search_users(search_query, status_filter, program_filter, grade_filter, sort_by, sort_order)
@@ -278,3 +279,6 @@ class AdminController:
             return {"success": False, "message": "Update failed."}
 
         return {"success": True, "message": "Details updated successfully."}
+
+    def load_profile_picture(self, relative_path, size=(150, 150)):
+        return self.profile_picture_service.load_profile_picture(relative_path, size=size)

@@ -1,10 +1,14 @@
 from database import add_user, get_user_by_username, update_password, username_exists, verify_login
+from services import ProfilePictureService
 from utils.auth import hash_password
 from utils.constants import ADMIN_PASSWORD
 from utils.validation import validate_email, validate_phone
 
 
 class AuthController:
+    def __init__(self, profile_picture_service=None):
+        self.profile_picture_service = profile_picture_service or ProfilePictureService()
+
     def login_student(self, username, password):
         username = username.strip()
         password = password.strip()
@@ -56,6 +60,7 @@ class AuthController:
         gender = payload.get("gender", "")
         category = payload.get("course_category", "")
         program = payload.get("program_type", "N/A")
+        profile_picture = payload.get("profile_picture") or None
 
         if gender.startswith("Select"):
             return {"success": False, "message": "Please select your gender."}
@@ -119,6 +124,7 @@ class AuthController:
             course_category=category,
             program_type=program,
             grade="Pending",
+            profile_picture=profile_picture,
         )
 
         if not success:
@@ -128,6 +134,15 @@ class AuthController:
             "success": True,
             "message": "Registration submitted!\n\nStatus: Pending Admin Approval\nYou can log in once an admin approves your account.",
         }
+
+    def upload_profile_picture(self, source_path, username_hint="student", previous_path=None):
+        result = self.profile_picture_service.save_profile_picture(source_path, filename_hint=username_hint)
+        if result.get("success") and previous_path and previous_path != result.get("relative_path"):
+            self.profile_picture_service.delete_profile_picture(previous_path)
+        return result
+
+    def load_profile_picture(self, relative_path, size=(150, 150)):
+        return self.profile_picture_service.load_profile_picture(relative_path, size=size)
 
     def start_password_reset(self, username):
         username = username.strip()

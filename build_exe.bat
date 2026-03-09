@@ -27,8 +27,17 @@ if not exist "%TK_DIR%\tk.tcl" (
 
 set "TCL_LIBRARY=%TCL_DIR%"
 set "TK_LIBRARY=%TK_DIR%"
+set "ICON_FILE=%PROJECT_DIR%\build\logo.ico"
+
+python -c "from pathlib import Path; from PIL import Image; src = Path(r'%PROJECT_DIR%\logo.png'); dst = Path(r'%ICON_FILE%'); dst.parent.mkdir(parents=True, exist_ok=True); img = Image.open(src); img.save(dst, format='ICO', sizes=[(16,16),(24,24),(32,32),(48,48),(64,64),(128,128),(256,256)])"
+if errorlevel 1 (
+    echo.
+    echo Failed to generate EXE icon from logo.png
+    exit /b 1
+)
 
 python -m PyInstaller --clean --noconfirm --specpath "build" --onefile --windowed --name "StudentRegistrationSystem" ^
+  --icon "%ICON_FILE%" ^
   --add-data "%PROJECT_DIR%\logo.png;." ^
   --add-data "%TCL_DIR%;_tcl_data" ^
   --add-data "%TK_DIR%;_tk_data" ^
